@@ -24,5 +24,14 @@ public class LightRotator : MonoBehaviour {
         transform.RotateAround(center.position, axis, rotationSpeed * Time.deltaTime);
         desiredPosition = (transform.position - center.position).normalized * radius + center.position;
         transform.position = Vector3.MoveTowards(transform.position, desiredPosition, Time.deltaTime * radiusSpeed);
+
+        if (transform.position.y < 0)
+        {
+            RenderSettings.ambientIntensity = .01f;
+        }
+        else
+        {
+            RenderSettings.ambientIntensity = 1f;
+        }
     }
 }
