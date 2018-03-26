@@ -4,40 +4,75 @@ using UnityEngine;
 
 public class LightRotator : MonoBehaviour {
 
-    public GameObject player;
-    Material sky;
-    public Transform center;
     public Transform stars;
-    public Vector3 axis = Vector3.right;
-    public Vector3 desiredPosition;
-    public float radius = .1f;
-    public float radiusSpeed = 0.5f;
-    public float rotationSpeed = 80.0f;
-    public float nightIntensity = .001f;
-    public float noonIntensity = 1f;
+    public Gradient nightDayColor;
+
+    public float maxIntensity = 3f;
+    public float minIntensity = 0f;
+    public float minPoint = -0.2f;
+
+    public float maxAmbient = 1f;
+    public float minAmbient = 0f;
+    public float minAmbientPoint = -0.2f;
+
+
+    public Gradient nightDayFogColor;
+    public AnimationCurve fogDensityCurve;
+    public float fogScale = 1f;
+
+    public float dayAtmosphereThickness = 0.4f;
+    public float nightAtmosphereThickness = 0.87f;
+
+    public Vector3 dayRotateSpeed;
+    public Vector3 nightRotateSpeed;
+
+    float skySpeed = 1;
+
+
+    Light mainLight;
+    Skybox sky;
+    Material skyMat;
 
     void Start()
     {
-        sky = RenderSettings.skybox;
-        player = GameObject.FindWithTag("Player");
-        center = player.transform;
-        transform.position = (transform.position - center.position).normalized * radius + center.position;
+
+        mainLight = GetComponent<Light>();
+        skyMat = RenderSettings.skybox;
+
     }
 
     void Update()
     {
-        stars.rotation = transform.rotation;
-        transform.RotateAround(center.position, axis, rotationSpeed * Time.deltaTime);
-        desiredPosition = (transform.position - center.position).normalized * radius + center.position;
-        transform.position = Vector3.MoveTowards(transform.position, desiredPosition, Time.deltaTime * radiusSpeed);
-        
-        if (transform.position.y < 0)
-        {
-            RenderSettings.ambientIntensity = nightIntensity;
-        }
+        stars.transform.rotation = transform.rotation;
+
+        float tRange = 1 - minPoint;
+        float dot = Mathf.Clamp01((Vector3.Dot(mainLight.transform.forward, Vector3.down) - minPoint) / tRange);
+        float i = ((maxIntensity - minIntensity) * dot) + minIntensity;
+
+        mainLight.intensity = i;
+
+        tRange = 1 - minAmbientPoint;
+        dot = Mathf.Clamp01((Vector3.Dot(mainLight.transform.forward, Vector3.down) - minAmbientPoint) / tRange);
+        i = ((maxAmbient - minAmbient) * dot) + minAmbient;
+        RenderSettings.ambientIntensity = i;
+
+        mainLight.color = nightDayColor.Evaluate(dot);
+        RenderSettings.ambientLight = mainLight.color;
+
+        RenderSettings.fogColor = nightDayFogColor.Evaluate(dot);
+        RenderSettings.fogDensity = fogDensityCurve.Evaluate(dot) * fogScale;
+
+        i = ((dayAtmosphereThickness - nightAtmosphereThickness) * dot) + nightAtmosphereThickness;
+        skyMat.SetFloat("_AtmosphereThickness", i);
+
+        if (dot > 0)
+            transform.Rotate(dayRotateSpeed * Time.deltaTime * skySpeed);
         else
-        {
-            RenderSettings.ambientIntensity = noonIntensity;
-        }
+            transform.Rotate(nightRotateSpeed * Time.deltaTime * skySpeed);
+
+        if (Input.GetKeyDown(KeyCode.Q)) skySpeed *= 0.5f;
+        if (Input.GetKeyDown(KeyCode.E)) skySpeed *= 2f;
+
+
     }
 }
